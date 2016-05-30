@@ -1,17 +1,18 @@
-#include <X11/Xlib.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <time.h>
 #include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+#include <xcb/xcb.h>
+#include <xcb/xproto.h>
 
 #define SIZE 80
 
 typedef struct {
-  Display *dpy;
-  Window root;
-} rn_display;
+  xcb_connection_t *connection;
+  xcb_window_t *window;
+} rn_window;
 
 typedef struct {
   FILE *online;
@@ -34,15 +35,29 @@ static uint64_t read_int(FILE *restrict f) {
   return ret;
 }
 
-static inline void init(rn_display *restrict d, rn_bat *restrict b) {
-  d->dpy = XOpenDisplay(NULL);
-  if (!d->dpy) {
-    printf("Unable to open display.");
+static inline void init_window(rn_window *restrict window) {
+  window->connection = xcb_connect(NULL, NULL);
+  const int err = xcb_connection_has_error(window->connection);
+  if (err) {
+    puts("Unable to open display.");
+    switch (err) {
+    case XCB_CONN_ERROR:
+      puts("XCB_CONN_ERROR");
+      break;
+    default:
+      printf("Unspecificied error trying to open display: %d", err);
+    }
+
+    xcb_disconnect(window->connection);
     exit(1);
   }
-  int screen = XDefaultScreen(d->dpy);
-  d->root = XRootWindow(d->dpy, screen);
 
+  xcb_screen_iterator_t iter =
+      xcb_setup_roots_iterator(xcb_get_setup(window->connection));
+  window->window = iter.data;
+}
+
+static inline void init_bat(rn_bat *restrict b) {
   FILE *energy_full = fopen("/sys/class/power_supply/BAT0/energy_full", "r");
   if (!energy_full) {
     b->battery_exists = false;
@@ -90,22 +105,38 @@ static size_t date(char *restrict str, size_t size) {
 }
 
 int main() {
-  rn_display d;
-  rn_bat b;
-
-  init(&d, &b);
+  rn_window window;
+  rn_bat battery;
   char name[SIZE + 1];
+
+  init_window(&window);
+  init_bat(&battery);
 
   for (;;) {
     name[SIZE] = 0;
     size_t size = 0;
 
-    if (b.battery_exists)
-      size += bat(&b, name + size, SIZE - size);
+    if (battery.battery_exists)
+      size += bat(&battery, name + size, SIZE - size);
     size += date(name + size, SIZE - size);
 
-    XStoreName(d.dpy, d.root, name);
-    XFlush(d.dpy);
-    sleep(60);
+    xcb_change_property(window.connection, XCB_PROP_MODE_REPLACE,
+                        *window.window, XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8,
+                        size, name);
+
+    if (xcb_flush(window.connection) <= 0) {
+      puts("Unable to flush to X connection");
+
+      xcb_disconnect(window.connection);
+      if (battery.battery_exists) {
+        fclose(battery.online);
+        fclose(battery.power_now);
+        fclose(battery.energy_now);
+      }
+
+      exit(2);
+    }
+
+    sleep(1);
   }
 }
