@@ -5,7 +5,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <xcb/xcb.h>
-#include <xcb/xproto.h>
 
 #define SIZE 80
 
@@ -37,17 +36,8 @@ static uint64_t read_int(FILE *restrict f) {
 
 static inline void init_window(rn_window *restrict window) {
   window->connection = xcb_connect(NULL, NULL);
-  const int err = xcb_connection_has_error(window->connection);
-  if (err) {
+  if (xcb_connection_has_error(window->connection)) {
     puts("Unable to open display.");
-    switch (err) {
-    case XCB_CONN_ERROR:
-      puts("XCB_CONN_ERROR");
-      break;
-    default:
-      printf("Unspecificied error trying to open display: %d", err);
-    }
-
     xcb_disconnect(window->connection);
     exit(1);
   }
@@ -126,17 +116,18 @@ int main() {
 
     if (xcb_flush(window.connection) <= 0) {
       puts("Unable to flush to X connection");
-
-      xcb_disconnect(window.connection);
-      if (battery.battery_exists) {
-        fclose(battery.online);
-        fclose(battery.power_now);
-        fclose(battery.energy_now);
-      }
-
-      exit(2);
+      break;
     }
 
-    sleep(1);
+    sleep(60);
   }
+
+  xcb_disconnect(window.connection);
+  if (battery.battery_exists) {
+    fclose(battery.online);
+    fclose(battery.power_now);
+    fclose(battery.energy_now);
+  }
+
+  return 2;
 }
