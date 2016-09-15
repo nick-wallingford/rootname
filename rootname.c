@@ -73,17 +73,17 @@ static size_t bat(rn_bat *restrict b, char *restrict str, size_t size) {
   const uint64_t energy_now = read_int(b->energy_now);
   const uint64_t power_now = read_int(b->power_now);
 
-  const int32_t battery_percentage = 100 * energy_now / b->energy_full;
+  const uint32_t battery_percentage = 100 * energy_now / b->energy_full;
 
   if (online) {
-    return snprintf(str, size, "AC %02d%% ", battery_percentage);
+    return snprintf(str, size, "AC %02u%% ", battery_percentage);
   } else if (power_now) {
-    const int32_t minutes = energy_now / power_now;
-    const int32_t seconds = (60 * energy_now / power_now) % 60;
-    return snprintf(str, size, "BAT %02d%% %d:%02d ", battery_percentage,
+    const uint32_t minutes = energy_now / power_now;
+    const uint32_t seconds = (60 * energy_now / power_now) % 60;
+    return snprintf(str, size, "BAT %02u%% %d:%02u ", battery_percentage,
                     minutes, seconds);
   } else {
-    return snprintf(str, size, "BAT %02d%% 0:00 ", battery_percentage);
+    return snprintf(str, size, "BAT %02u%% 0:00 ", battery_percentage);
   }
 }
 
