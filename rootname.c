@@ -10,7 +10,7 @@
 
 typedef struct {
   xcb_connection_t *connection;
-  xcb_window_t *window;
+  xcb_window_t window;
 } rn_window;
 
 typedef struct {
@@ -35,7 +35,8 @@ static uint64_t read_int(FILE *restrict f) {
 }
 
 static inline void init_window(rn_window *restrict window) {
-  window->connection = xcb_connect(NULL, NULL);
+  int screen_num;
+  window->connection = xcb_connect(NULL, &screen_num);
   if (xcb_connection_has_error(window->connection)) {
     puts("Unable to open display.");
     xcb_disconnect(window->connection);
@@ -44,7 +45,11 @@ static inline void init_window(rn_window *restrict window) {
 
   xcb_screen_iterator_t iter =
       xcb_setup_roots_iterator(xcb_get_setup(window->connection));
-  window->window = iter.data;
+  while (screen_num--)
+    xcb_screen_next(&iter);
+
+  xcb_screen_t *screen = iter.data;
+  window->window = screen->root;
 }
 
 static inline void init_bat(rn_bat *restrict b) {
@@ -110,9 +115,8 @@ int main() {
       size += bat(&battery, name + size, SIZE - size);
     size += date(name + size, SIZE - size);
 
-    xcb_change_property(window.connection, XCB_PROP_MODE_REPLACE,
-                        *window.window, XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8,
-                        size, name);
+    xcb_change_property(window.connection, XCB_PROP_MODE_REPLACE, window.window,
+                        XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8, size, name);
 
     if (xcb_flush(window.connection) <= 0) {
       puts("Unable to flush to X connection");
