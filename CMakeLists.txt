@@ -17,3 +17,5 @@ pkg_check_modules(XCB REQUIRED xcb)
 
 add_executable(rootname ${SRC_LIST})
 target_link_libraries(rootname "${XCB_LIBRARIES}")
+
+install(PROGRAMS rootname DESTINATION bin)
