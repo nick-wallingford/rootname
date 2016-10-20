@@ -3,6 +3,9 @@
 
 void init_bat(rn_bat *restrict b) {
   FILE *energy_full = fopen("/sys/class/power_supply/BAT0/energy_full", "r");
+  if (!energy_full)
+    energy_full = fopen("/sys/class/power_supply/BAT0/charge_full", "r");
+
   if (!energy_full) {
     b->battery_exists = false;
 
@@ -16,8 +19,14 @@ void init_bat(rn_bat *restrict b) {
   b->energy_full = read_int(energy_full);
 
   b->online = fopen("/sys/class/power_supply/AC/online", "r");
+
   b->energy_now = fopen("/sys/class/power_supply/BAT0/energy_now", "r");
+  if (!b->energy_now)
+    b->energy_now = fopen("/sys/class/power_supply/BAT0/charge_now", "r");
+
   b->power_now = fopen("/sys/class/power_supply/BAT0/power_now", "r");
+  if (!b->power_now)
+    b->power_now = fopen("/sys/class/power_supply/BAT0/current_now", "r");
 
   fclose(energy_full);
 }
@@ -40,4 +49,3 @@ size_t bat(rn_bat *restrict b, char *restrict str, size_t size) {
     return snprintf(str, size, "BAT %02u%% 0:00 ", battery_percentage);
   }
 }
-
