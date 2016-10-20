@@ -18,5 +18,5 @@ pkg_check_modules(XCB REQUIRED xcb)
 add_executable(rootname ${SRC_LIST})
 target_link_libraries(rootname "${XCB_LIBRARIES}")
 
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIRECTORY}/rootname
-  DESTINATION bin)
+install(TARGETS rootname
+  RUNTIME DESTINATION bin)
