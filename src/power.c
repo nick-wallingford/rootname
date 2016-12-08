@@ -31,6 +31,15 @@ void init_bat(rn_bat *restrict b) {
   fclose(energy_full);
 }
 
+void close_bat(rn_bat *restrict b) {
+  if(b->online)
+    fclose(b->online);
+  if(b->energy_now)
+    fclose(b->energy_now);
+  if(b->power_now)
+    fclose(b->power_now);
+}
+
 size_t bat(rn_bat *restrict b, char *restrict str, size_t size) {
   const bool online = read_int(b->online);
   const uint64_t energy_now = read_int(b->energy_now);

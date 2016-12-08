@@ -10,7 +10,8 @@ uint64_t read_int(FILE *restrict f) {
   size_t bytes = fread(buffer, 1, SIZE, f);
   buffer[bytes] = 0;
 
-  sscanf(buffer, "%" SCNu64, &ret);
-  return ret;
+  if (sscanf(buffer, "%" SCNu64, &ret) == 1)
+    return ret;
+  else
+    return SIZE_MAX;
 }
-
